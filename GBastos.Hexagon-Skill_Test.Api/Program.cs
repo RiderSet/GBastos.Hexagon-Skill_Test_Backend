@@ -10,9 +10,15 @@ var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("Conn")
     ?? throw new ArgumentNullException("ConnectionString 'Conn' desconhecida.");
 
+var provider = builder.Configuration["DatabaseProvider"];
+
 builder.Services.AddDbContext<UsuarioDbContext>(options =>
-    options.UseSqlite("Data Source=hexagon.db"));
- // options.UseSqlServer(connectionString));
+{
+    if (provider == "Sqlite")
+        options.UseSqlite(builder.Configuration.GetConnectionString("Conn"));
+    else
+        options.UseSqlServer(builder.Configuration.GetConnectionString("Conn"));
+});
 
 var keyString = builder.Configuration["Jwt:Key"]
     ?? throw new ArgumentNullException("Jwt:Key não encontrada.");
