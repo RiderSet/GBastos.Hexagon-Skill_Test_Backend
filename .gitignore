@@ -5,6 +5,8 @@ obj/
 *.user
 *.suo
 
+.env
+
 # Logs
 *.log
 

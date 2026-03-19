@@ -1,0 +1,136 @@
+1️⃣ Preparação do ambiente DEV
+Requisitos
+
+Instalar .NET 9 SDK
+
+Ter um banco de dados local:
+
+SQLite (não precisa instalar, só arquivo .db) ou
+
+SQL Server (pode ser SQL Server Express)
+
+Ter o RabbitMQ rodando localmente (Docker é mais fácil)
+
+Ter um editor/IDE (VS Code, Visual Studio, Rider)
+
+Passo a passo DEV
+
+Clonar o repositório
+
+git clone https://github.com/SEU_USUARIO/SEU_REPO.git
+cd SEU_REPO
+
+Configurar variáveis de ambiente
+
+JWT_KEY → chave secreta do JWT (ex.: minha-chave-secreta)
+
+SA_PASSWORD → se for usar SQL Server (ex.: MinhaSenha123!)
+
+RabbitMQ:
+
+RabbitMQ__HostName=localhost
+
+RabbitMQ__QueueName=usuarios
+
+Em Windows PowerShell:
+
+$env:JWT_KEY="minha-chave-secreta"
+$env:SA_PASSWORD="MinhaSenha123!"
+$env:RabbitMQ__HostName="localhost"
+$env:RabbitMQ__QueueName="usuarios"
+
+Configurar appsettings.json (opcional)
+
+{
+  "DatabaseProvider": "Sqlite",
+  "ConnectionStrings": {
+    "Sqlite": "Data Source=usuarios.db",
+    "SqlServer": "Server=localhost;Database=UsuariosDb;User Id=sa;Password={PASSWORD};TrustServerCertificate=True;"
+  },
+  "Jwt": {
+    "Key": "minha-chave-secreta"
+  },
+  "RabbitMQ": {
+    "HostName": "localhost",
+    "QueueName": "usuarios"
+  }
+}
+
+Rodar migrações
+
+dotnet ef database update
+
+Rodar a API
+
+dotnet run
+
+Testar no Swagger
+
+Acesse: https://localhost:7248/swagger
+
+Faça login em /login com:
+
+Username: Hexagon
+Password: senhaHexagon
+
+Use o token JWT para acessar /usuarios
+
+2️⃣ Preparação do ambiente PROD
+Requisitos PROD
+
+Servidor Linux ou Windows com .NET 9 Runtime
+
+Banco de dados remoto (SQL Server ou PostgreSQL compatível, se for alterar)
+
+RabbitMQ em produção
+
+Servidor web reverso (ex.: Nginx, Apache, ou IIS no Windows)
+
+HTTPS/TLS configurado (importante para JWT)
+
+Passo a passo PROD
+
+Configurar variáveis de ambiente (não colocar segredo em arquivos)
+
+export JWT_KEY="uma-chave-secreta-producao"
+export SA_PASSWORD="SenhaSeguraProd123!"
+export RabbitMQ__HostName="rabbitmq-prod.example.com"
+export RabbitMQ__QueueName="usuarios"
+export DatabaseProvider="SqlServer"
+
+Configurar appsettings.Production.json
+
+{
+  "DatabaseProvider": "SqlServer",
+  "ConnectionStrings": {
+    "SqlServer": "Server=sqlserver-prod.example.com;Database=UsuariosDb;User Id=sa;Password={PASSWORD};TrustServerCertificate=True;"
+  }
+}
+
+Aplicar migrações
+
+dotnet ef database update --environment Production
+
+Publicar a API
+
+dotnet publish -c Release -o ./publish
+
+Rodar a API no servidor
+
+dotnet ./publish/GBastos.Hexagon_Skill_Test.Api.dll --urls "https://0.0.0.0:5001"
+
+Configurar servidor reverso (opcional, recomendado)
+
+Nginx para redirecionar portas HTTP/HTTPS para localhost:5001
+
+Systemd service no Linux para rodar como serviço automático
+
+3️⃣ Observações importantes
+
+RabbitMQ e Outbox: o OutboxMessage garante que nenhuma mensagem se perca.
+
+JWT: nunca usar chave fraca em PROD.
+
+Banco de dados: nunca deixar senha de dev em PROD.
+
+HTTPS: JWT precisa de HTTPS para segurança.

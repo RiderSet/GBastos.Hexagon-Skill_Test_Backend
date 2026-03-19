@@ -74,6 +74,14 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
+DotNetEnv.Env.Load();
+
+var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY")!;
+var saPassword = Environment.GetEnvironmentVariable("SA_PASSWORD");
+var sqlitePath = Environment.GetEnvironmentVariable("SQLITE_PATH");
+var rabbitHost = Environment.GetEnvironmentVariable("RabbitMQ__HostName");
+var rabbitQueue = Environment.GetEnvironmentVariable("RabbitMQ__QueueName");
+
 var app = builder.Build();
 
 app.UseSwagger();
