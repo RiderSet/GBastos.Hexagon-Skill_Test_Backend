@@ -12,7 +12,6 @@ public static class UsuarioEndpoints
     {
         var publisher = new RabbitMQPublisher(app.Configuration);
 
-        // Criar usuário
         app.MapPost("/usuarios", [Authorize] async (Usuario usuario, UsuarioDbContext db) =>
         {
             db.Usuarios.Add(usuario);
@@ -21,18 +20,15 @@ public static class UsuarioEndpoints
             return Results.Created($"/usuarios/{usuario.Id}", usuario);
         });
 
-        // Listar todos
         app.MapGet("/usuarios", [Authorize] async (UsuarioDbContext db) =>
             await db.Usuarios.ToListAsync());
 
-        // Obter por Id
         app.MapGet("/usuarios/{id}", [Authorize] async (int id, UsuarioDbContext db) =>
         {
             var usuario = await db.Usuarios.FindAsync(id);
             return usuario != null ? Results.Ok(usuario) : Results.NotFound();
         });
 
-        // Atualizar
         app.MapPut("/usuarios/{id}", [Authorize] async (int id, Usuario updated, UsuarioDbContext db) =>
         {
             var usuario = await db.Usuarios.FindAsync(id);
@@ -50,7 +46,6 @@ public static class UsuarioEndpoints
             return Results.Ok(usuario);
         });
 
-        // Remover
         app.MapDelete("/usuarios/{id}", [Authorize] async (int id, UsuarioDbContext db) =>
         {
             var usuario = await db.Usuarios.FindAsync(id);
