@@ -1,0 +1,19 @@
+# Pastas e arquivos do Visual Studio
+.vs/
+bin/
+obj/
+*.user
+*.suo
+
+# Logs
+*.log
+
+# Configurações do VS Code
+.vscode/
+
+# Node.js (se houver frontend)
+node_modules/
+
+# Arquivos temporários
+*.tmp
+*.cache
