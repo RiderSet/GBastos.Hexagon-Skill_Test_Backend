@@ -1,59 +1,76 @@
 ﻿using GBastos.Hexagon_Skill_Test.Api.Data;
-using GBastos.Hexagon_Skill_Test.Api.Messaging;
 using GBastos.Hexagon_Skill_Test.Api.Models;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-
-namespace GBastos.Hexagon_Skill_Test.Api.Endpoints;
 
 public static class UsuarioEndpoints
 {
     public static void MapUsuarioEndpoints(this WebApplication app)
     {
-        var publisher = new RabbitMQPublisher(app.Configuration);
+        var group = app.MapGroup("/usuarios")
+                       .RequireAuthorization();
 
-        app.MapPost("/usuarios", [Authorize] async (Usuario usuario, UsuarioDbContext db) =>
+        group.MapPost("", async (UsuarioDbContext db, UsuarioCreateDto input) =>
         {
+            var usuario = new Usuario
+            {
+                Id = Guid.NewGuid(),
+                Nome = input.Nome,
+                Idade = input.Idade,
+                EstadoCivil = input.EstadoCivil,
+                CPF = input.CPF,
+                Cidade = input.Cidade,
+                Estado = input.Estado
+            };
+
             db.Usuarios.Add(usuario);
             await db.SaveChangesAsync();
-            publisher.Publish(usuario);
+
             return Results.Created($"/usuarios/{usuario.Id}", usuario);
         });
 
-        app.MapGet("/usuarios", [Authorize] async (UsuarioDbContext db) =>
-            await db.Usuarios.ToListAsync());
-
-        app.MapGet("/usuarios/{id}", [Authorize] async (int id, UsuarioDbContext db) =>
+        group.MapGet("", async (UsuarioDbContext db, int page = 1, int pageSize = 10) =>
         {
-            var usuario = await db.Usuarios.FindAsync(id);
-            return usuario != null ? Results.Ok(usuario) : Results.NotFound();
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+
+            var total = await db.Usuarios.CountAsync();
+            var data = await db.Usuarios
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return Results.Ok(new { total, page, pageSize, data });
         });
 
-        app.MapPut("/usuarios/{id}", [Authorize] async (int id, Usuario updated, UsuarioDbContext db) =>
+        group.MapGet("/{id:Guid}", async (UsuarioDbContext db, Guid id) =>
         {
             var usuario = await db.Usuarios.FindAsync(id);
-            if (usuario == null) return Results.NotFound();
+            return usuario is null ? Results.NotFound() : Results.Ok(usuario);
+        });
 
-            usuario.Nome = updated.Nome;
-            usuario.Idade = updated.Idade;
-            usuario.EstadoCivil = updated.EstadoCivil;
-            usuario.CPF = updated.CPF;
-            usuario.Cidade = updated.Cidade;
-            usuario.Estado = updated.Estado;
+        group.MapPut("/{id:Guid}", async (UsuarioDbContext db, Guid id, UsuarioCreateDto input) =>
+        {
+            var usuario = await db.Usuarios.FindAsync(id);
+            if (usuario is null) return Results.NotFound();
+
+            usuario.Nome = input.Nome;
+            usuario.Idade = input.Idade;
+            usuario.EstadoCivil = input.EstadoCivil;
+            usuario.CPF = input.CPF;
+            usuario.Cidade = input.Cidade;
+            usuario.Estado = input.Estado;
 
             await db.SaveChangesAsync();
-            publisher.Publish(usuario);
             return Results.Ok(usuario);
         });
 
-        app.MapDelete("/usuarios/{id}", [Authorize] async (int id, UsuarioDbContext db) =>
+        group.MapDelete("/{id:Guid}", async (UsuarioDbContext db, Guid id) =>
         {
             var usuario = await db.Usuarios.FindAsync(id);
-            if (usuario == null) return Results.NotFound();
+            if (usuario is null) return Results.NotFound();
 
             db.Usuarios.Remove(usuario);
             await db.SaveChangesAsync();
-            publisher.Publish(usuario);
             return Results.NoContent();
         });
     }

@@ -1,5 +1,4 @@
 using GBastos.Hexagon_Skill_Test.Api.Data;
-using GBastos.Hexagon_Skill_Test.Api.Endpoints;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;

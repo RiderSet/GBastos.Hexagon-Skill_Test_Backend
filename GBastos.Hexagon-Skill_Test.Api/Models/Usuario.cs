@@ -2,8 +2,9 @@
 
 public class Usuario
 {
-    public int Id { get; set; }
-    public string Nome { get; set; } = null!;
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    public string Nome { get; set; } = string.Empty;
     public int Idade { get; set; }
     public string EstadoCivil { get; set; } = null!;
     public string CPF { get; set; } = null!;
