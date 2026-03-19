@@ -11,7 +11,8 @@ var connectionString = builder.Configuration.GetConnectionString("Conn")
     ?? throw new ArgumentNullException("ConnectionString 'Conn' desconhecida.");
 
 builder.Services.AddDbContext<UsuarioDbContext>(options =>
-    options.UseSqlServer(connectionString));
+    options.UseSqlite("Data Source=hexagon.db"));
+ // options.UseSqlServer(connectionString));
 
 var keyString = builder.Configuration["Jwt:Key"]
     ?? throw new ArgumentNullException("Jwt:Key não encontrada.");
