@@ -2,7 +2,7 @@
 using System.Text;
 using System.Text.Json;
 
-namespace GBastos.Hexagon_Skill_Test.Api.Messaging;
+namespace GBastos.Hexagon_Skill_Test.Api.Messaging.Brokers;
 
 public class RabbitMQPublisher
 {

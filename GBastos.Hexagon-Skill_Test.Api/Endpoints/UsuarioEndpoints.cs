@@ -1,13 +1,15 @@
 ﻿using GBastos.Hexagon_Skill_Test.Api.Data;
+using GBastos.Hexagon_Skill_Test.Api.Messaging.Brokers;
+using GBastos.Hexagon_Skill_Test.Api.Messaging.Outbox;
 using GBastos.Hexagon_Skill_Test.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 public static class UsuarioEndpoints
 {
-    public static void MapUsuarioEndpoints(this WebApplication app)
+    public static void MapUsuarioEndpoints(this WebApplication app, RabbitMQPublisher publisher)
     {
-        var group = app.MapGroup("/usuarios")
-                       .RequireAuthorization();
+        var group = app.MapGroup("/usuarios").RequireAuthorization();
 
         group.MapPost("", async (UsuarioDbContext db, UsuarioCreateDto input) =>
         {
@@ -23,7 +25,15 @@ public static class UsuarioEndpoints
             };
 
             db.Usuarios.Add(usuario);
+            db.OutboxMessages.Add(new OutboxMessage
+            {
+                EventType = "UsuarioCreated",
+                Payload = JsonSerializer.Serialize(usuario)
+            });
+
             await db.SaveChangesAsync();
+
+            publisher.Publish(new { Event = "UsuarioCreated", Data = usuario });
 
             return Results.Created($"/usuarios/{usuario.Id}", usuario);
         });
@@ -34,10 +44,7 @@ public static class UsuarioEndpoints
             pageSize = Math.Clamp(pageSize, 1, 100);
 
             var total = await db.Usuarios.CountAsync();
-            var data = await db.Usuarios
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
+            var data = await db.Usuarios.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
 
             return Results.Ok(new { total, page, pageSize, data });
         });
@@ -60,7 +67,15 @@ public static class UsuarioEndpoints
             usuario.Cidade = input.Cidade;
             usuario.Estado = input.Estado;
 
+            db.OutboxMessages.Add(new OutboxMessage
+            {
+                EventType = "UsuarioUpdated",
+                Payload = JsonSerializer.Serialize(usuario)
+            });
+
             await db.SaveChangesAsync();
+            publisher.Publish(new { Event = "UsuarioUpdated", Data = usuario });
+
             return Results.Ok(usuario);
         });
 
@@ -70,7 +85,15 @@ public static class UsuarioEndpoints
             if (usuario is null) return Results.NotFound();
 
             db.Usuarios.Remove(usuario);
+            db.OutboxMessages.Add(new OutboxMessage
+            {
+                EventType = "UsuarioDeleted",
+                Payload = JsonSerializer.Serialize(usuario)
+            });
+
             await db.SaveChangesAsync();
+            publisher.Publish(new { Event = "UsuarioDeleted", Data = usuario });
+
             return Results.NoContent();
         });
     }

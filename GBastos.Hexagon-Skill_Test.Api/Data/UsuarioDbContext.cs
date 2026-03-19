@@ -1,4 +1,5 @@
-﻿using GBastos.Hexagon_Skill_Test.Api.Models;
+﻿using GBastos.Hexagon_Skill_Test.Api.Messaging.Outbox;
+using GBastos.Hexagon_Skill_Test.Api.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace GBastos.Hexagon_Skill_Test.Api.Data;
@@ -9,6 +10,7 @@ public class UsuarioDbContext : DbContext
         : base(options) { }
 
     public DbSet<Usuario> Usuarios { get; set; } = null!;
+    public DbSet<OutboxMessage> OutboxMessages { get; set; } = null!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
