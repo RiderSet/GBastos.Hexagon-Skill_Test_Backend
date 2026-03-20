@@ -5,12 +5,12 @@ Projeto: GBastos.Hexagon-Skill_Test_Backend
 Descrição
 
 
-A GBastos.Hexagon-Skill_Test_Backend é uma API RESTful construída com .NET 9 minimal API, seguindo padrões 
+A GBastos.Hexagon-Skill_Test_Backend é uma API "minimal", RESTful, construída com .NET 9, seguindo padrões 
 de arquitetura Hexagonal/Clean Architecture.
 
 
-Foi desenvolvida para gerenciar dados de usuarios, inclui login, é um CRUD completo, integrado por mensageria 
-RabbitMQ (sob Outbox Pattern). Preparada para, em DEV, utilizar banco de dados SQLite e, em PROD, utilizar SQL Server no Docker.
+Foi desenvolvida para gerenciar dados de usuarios. Com login, é um CRUD completo, integrado por mensageria 
+RabbitMQ (sob Outbox Pattern), preparada para, em DEV, trabalhar com banco de dados SQLite e, em PROD, com SQL Server no Docker.
 
 
 Tecnologias e Métodos Utilizados
@@ -19,6 +19,7 @@ Tecnologias e Métodos Utilizados
 - C# 12 – linguagem de desenvolvimento
 - Entity Framework Core 9 – ORM para persistência de dados
 - SQLite / SQL Server – banco de dados
+- Docker – para garantir funcionamento e versão do BD em qualquer ambiente 
 - MediatR – implementação de CQRS e patterns de Commands / Queries
 - RabbitMQ – broker de mensagens para integração e eventos assíncronos
 - Outbox Pattern – garante consistência de mensagens mesmo em falhas de transações
