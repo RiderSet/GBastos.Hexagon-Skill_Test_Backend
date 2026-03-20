@@ -29,12 +29,12 @@ Tecnologias e Métodos Utilizados
     
 Pré-requisitos
 
-Antes de rodar a API, certifique-se de ter instalado:
+Antes de rodar a API, certifique-se de:
 
 - .NET 9 SDK
 - RabbitMQ (local ou em container Docker)
+- Um editor de código como [Visual Studio 2022+] ou [VSCode]
 
-Um editor de código como [Visual Studio 2022+] ou [VSCode]
+Em PROD: execuete o Docker.
 
-
-Opcional para SQLite: não é necessário servidor adicional.
+Em DEV: para o SQLite não é necessário servidor adicional.
