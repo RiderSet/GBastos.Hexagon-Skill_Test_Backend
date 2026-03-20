@@ -19,8 +19,7 @@ Tecnologias e Métodos Utilizados
 - C# 12 – linguagem de desenvolvimento
 - Entity Framework Core 9 – ORM para persistência de dados
 - SQLite / SQL Server – banco de dados
-- Docker – para garantir funcionamento e versão do BD em qualquer ambiente 
-- MediatR – implementação de CQRS e patterns de Commands / Queries
+- Docker – para garantir funcionamento e versão do BD em qualquer ambiente
 - RabbitMQ – broker de mensagens para integração e eventos assíncronos
 - Outbox Pattern – garante consistência de mensagens mesmo em falhas de transações
 - JWT (JSON Web Tokens) – autenticação e autorização
