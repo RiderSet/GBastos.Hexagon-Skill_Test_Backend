@@ -35,6 +35,5 @@ Antes de rodar a API, certifique-se de:
 - RabbitMQ (local ou em container Docker)
 - Um editor de código como [Visual Studio 2022+] ou [VSCode]
 
-Em PROD: execuete o Docker.
-
-Em DEV: para o SQLite não é necessário servidor adicional.
+Em PROD: para o SQL Server, execute o Docker.
+Em DEV: para o SQLite, não é necessário servidor adicional.
