@@ -8,7 +8,6 @@ Descrição
 A GBastos.Hexagon-Skill_Test_Backend é uma API "minimal", RESTful, construída com .NET 9, seguindo padrões 
 de arquitetura Hexagonal/Clean Architecture.
 
-
 Foi desenvolvida para gerenciar dados de usuarios. Com login, é um CRUD completo, integrado por mensageria 
 RabbitMQ (sob Outbox Pattern), preparada para, em DEV, trabalhar com banco de dados SQLite e, em PROD, com SQL Server no Docker.
 
@@ -24,6 +23,16 @@ Tecnologias e Métodos Utilizados
 - Outbox Pattern – garante consistência de mensagens mesmo em falhas de transações
 - JWT (JSON Web Tokens) – autenticação e autorização
 - Swagger / OpenAPI – documentação interativa da API
+
+
+Padrões
+
+- Outbox Pattern
+- RabbitMQ Publisher
+- RequireAuthorization
+- Guid como Id
+- Paginação no GET
+- Minimal API
 
     
 Pré-requisitos
