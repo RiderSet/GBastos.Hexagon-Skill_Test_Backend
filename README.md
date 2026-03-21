@@ -1,9 +1,7 @@
 Projeto: GBastos.Hexagon-Skill_Test_Backend
 
 
-
 Descrição
-
 
 A GBastos.Hexagon-Skill_Test_Backend é uma API "minimal", RESTful, construída com .NET 9, seguindo padrões 
 de arquitetura Hexagonal/Clean Architecture.
@@ -34,7 +32,7 @@ Padrões
 - Paginação no GET
 - Minimal API
 
-    
+
 Pré-requisitos
 
 Antes de rodar a API, certifique-se de:
