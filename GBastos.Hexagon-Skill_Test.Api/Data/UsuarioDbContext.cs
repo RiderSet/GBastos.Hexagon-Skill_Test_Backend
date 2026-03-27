@@ -26,5 +26,8 @@ public class UsuarioDbContext : DbContext
         modelBuilder.Entity<Usuario>()
             .Property(u => u.CPF)
             .IsRequired();
+
+        modelBuilder.Entity<OutboxMessage>()
+            .HasIndex(x => x.Processed);
     }
 }

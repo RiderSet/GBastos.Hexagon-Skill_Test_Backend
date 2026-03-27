@@ -20,5 +20,22 @@ services:
       - "5672:5672"
       - "15672:15672"
 
+  backend:
+    build:
+      context: ./GBastos.Hexagon-Skill_Test_Backend
+      dockerfile: Dockerfile
+    container_name: hexagon-backend
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=HexagonDb;User Id=sa;Password=${SA_PASSWORD};
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=${RABBITMQ_DEFAULT_USER}
+      - RabbitMQ__Password=${RABBITMQ_DEFAULT_PASS}
+    ports:
+      - "5000:5000"
+    depends_on:
+      - sqlserver
+      - rabbitmq
+
 volumes:
   sql_data:

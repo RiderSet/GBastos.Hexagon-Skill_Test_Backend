@@ -1,4 +1,4 @@
-using GBastos.Hexagon_Skill_Test.Api.Data;
+﻿using GBastos.Hexagon_Skill_Test.Api.Data;
 using GBastos.Hexagon_Skill_Test.Api.Messaging.Brokers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -8,29 +8,31 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configuração do banco
 var provider = builder.Configuration["DatabaseProvider"];
 builder.Services.AddDbContext<UsuarioDbContext>(options =>
 {
     if (provider == "SqlServer")
     {
         var connectionString = builder.Configuration.GetConnectionString("SqlServer")
-            ?? throw new ArgumentNullException("ConnectionStrings:SqlServer n�o encontrada.");
+            ?? throw new ArgumentNullException("ConnectionStrings:SqlServer não encontrada.");
         var password = Environment.GetEnvironmentVariable("SA_PASSWORD")
-            ?? throw new Exception("SA_PASSWORD n�o definida.");
+            ?? throw new Exception("SA_PASSWORD não definida.");
         connectionString = connectionString.Replace("{PASSWORD}", password);
         options.UseSqlServer(connectionString);
     }
     else
     {
         var connectionString = builder.Configuration.GetConnectionString("Sqlite")
-            ?? throw new ArgumentNullException("ConnectionStrings:Sqlite n�o encontrada.");
+            ?? throw new ArgumentNullException("ConnectionStrings:Sqlite não encontrada.");
         options.UseSqlite(connectionString);
     }
 });
 
+// Configuração do JWT
 var keyString = Environment.GetEnvironmentVariable("JWT_KEY")
     ?? builder.Configuration["Jwt:Key"]
-    ?? throw new ArgumentNullException("JWT Key n�o encontrada.");
+    ?? throw new ArgumentNullException("JWT Key não encontrada.");
 var key = Encoding.ASCII.GetBytes(keyString);
 
 builder.Services.AddAuthentication(options =>
@@ -51,8 +53,10 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+// Registrar RabbitMQ
 builder.Services.AddSingleton<RabbitMQPublisher>();
 
+// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
@@ -74,22 +78,31 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-DotNetEnv.Env.Load();
+// ⚡ Configuração de CORS para permitir Angular
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend",
+        policy => policy
+            .WithOrigins("http://localhost:4200") // URL do frontend Angular
+            .AllowAnyHeader()
+            .AllowAnyMethod());
+});
 
-var jwtKey = Environment.GetEnvironmentVariable("JWT_KEY")!;
-var saPassword = Environment.GetEnvironmentVariable("SA_PASSWORD");
-var sqlitePath = Environment.GetEnvironmentVariable("SQLITE_PATH");
-var rabbitHost = Environment.GetEnvironmentVariable("RabbitMQ__HostName");
-var rabbitQueue = Environment.GetEnvironmentVariable("RabbitMQ__QueueName");
+DotNetEnv.Env.Load();
 
 var app = builder.Build();
 
+// Middlewares
 app.UseSwagger();
 app.UseSwaggerUI();
+
+// ⚡ Aplicar CORS antes de Authentication/Authorization
+app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
+// Endpoints
 var publisher = app.Services.GetRequiredService<RabbitMQPublisher>();
 app.MapUsuarioEndpoints(publisher);
 

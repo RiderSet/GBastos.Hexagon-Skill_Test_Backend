@@ -4,40 +4,37 @@ using System.Text.Json;
 
 namespace GBastos.Hexagon_Skill_Test.Api.Messaging.Brokers;
 
-public class RabbitMQPublisher
+public class RabbitMQPublisher : IDisposable
 {
-    private readonly string _hostname;
+    private readonly IConnection _connection;
+    private readonly IModel _channel;
     private readonly string _queueName;
 
     public RabbitMQPublisher(IConfiguration configuration)
     {
-        _hostname = configuration["RabbitMQ:HostName"]
-            ?? throw new ArgumentNullException("RabbitMQ:HostName não configurado");
-        _queueName = configuration["RabbitMQ:QueueName"]
-            ?? throw new ArgumentNullException("RabbitMQ:QueueName não configurado");
+        var hostname = configuration["RabbitMQ:HostName"] ?? throw new ArgumentNullException("HostName");
+        _queueName = configuration["RabbitMQ:QueueName"] ?? throw new ArgumentNullException("QueueName");
+
+        var factory = new ConnectionFactory() { HostName = hostname };
+        _connection = factory.CreateConnection();
+        _channel = _connection.CreateModel();
+
+        _channel.QueueDeclare(queue: _queueName,
+                             durable: true,
+                             exclusive: false,
+                             autoDelete: false,
+                             arguments: null);
     }
 
     public void Publish<T>(T message)
     {
-        var factory = new ConnectionFactory() { HostName = _hostname };
+        var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
+        _channel.BasicPublish(exchange: "", routingKey: _queueName, basicProperties: null, body: body);
+    }
 
-        using IConnection connection = factory.CreateConnection();
-        using IModel channel = connection.CreateModel();
-
-        channel.QueueDeclare(
-            queue: _queueName,
-            durable: true,
-            exclusive: false,
-            autoDelete: false,
-            arguments: null);
-
-        var messageString = JsonSerializer.Serialize(message) ?? string.Empty;
-        var body = Encoding.UTF8.GetBytes(messageString);
-
-        channel.BasicPublish(
-            exchange: "",
-            routingKey: _queueName,
-            basicProperties: null,
-            body: body);
+    public void Dispose()
+    {
+        _channel?.Close();
+        _connection?.Close();
     }
 }

@@ -11,7 +11,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace GBastos.Hexagon_Skill_Test.Api.Migrations
 {
     [DbContext(typeof(UsuarioDbContext))]
-    [Migration("20260319185912_InitialCreate")]
+    [Migration("20260326171910_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -19,6 +19,33 @@ namespace GBastos.Hexagon_Skill_Test.Api.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.14");
+
+            modelBuilder.Entity("GBastos.Hexagon_Skill_Test.Api.Messaging.Outbox.OutboxMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EventType")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("Processed")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Processed");
+
+                    b.ToTable("OutboxMessages");
+                });
 
             modelBuilder.Entity("GBastos.Hexagon_Skill_Test.Api.Models.Usuario", b =>
                 {
