@@ -1,4 +1,22 @@
 services:
+  backend:
+    build:
+      context: .
+      dockerfile: GBastos.Hexagon-Skill_Test.Api/Dockerfile
+    container_name: hexagon-api
+    ports:
+      - "5017:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=HexagonDb;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__Username=${RABBITMQ_DEFAULT_USER}
+      - RabbitMQ__Password=${RABBITMQ_DEFAULT_PASS}
+    depends_on:
+      - sqlserver
+      - rabbitmq
+    restart: always
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: hexagon-sql
