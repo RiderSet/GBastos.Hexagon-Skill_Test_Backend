@@ -10,7 +10,8 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
       - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=HexagonDb;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
-      - RabbitMQ__Host=rabbitmq
+      - RabbitMQ__HostName=rabbitmq
+      - RabbitMQ__QueueName=usuarios
       - RabbitMQ__Username=${RABBITMQ_DEFAULT_USER}
       - RabbitMQ__Password=${RABBITMQ_DEFAULT_PASS}
     depends_on:

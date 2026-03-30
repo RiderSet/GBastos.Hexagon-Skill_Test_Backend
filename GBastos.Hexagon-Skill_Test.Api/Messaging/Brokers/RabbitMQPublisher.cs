@@ -15,7 +15,13 @@ public class RabbitMQPublisher : IDisposable
         var hostname = configuration["RabbitMQ:HostName"] ?? throw new ArgumentNullException("HostName");
         _queueName = configuration["RabbitMQ:QueueName"] ?? throw new ArgumentNullException("QueueName");
 
-        var factory = new ConnectionFactory() { HostName = hostname };
+        var factory = new ConnectionFactory()
+        {
+            HostName = hostname,
+            UserName = configuration["RabbitMQ:Username"],
+            Password = configuration["RabbitMQ:Password"]
+        };
+
         _connection = factory.CreateConnection();
         _channel = _connection.CreateModel();
 
