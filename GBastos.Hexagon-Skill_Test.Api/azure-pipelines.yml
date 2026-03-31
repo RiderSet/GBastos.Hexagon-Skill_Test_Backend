@@ -1,0 +1,44 @@
+trigger:
+  branches:
+    include:
+      - main   # dispara o pipeline em cada commit na branch main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+# Instalar Node.js
+- task: NodeTool@0
+  inputs:
+    versionSpec: '18.x'
+  displayName: 'Instalar Node.js'
+
+# Instalar dependências
+- script: |
+    npm install
+  displayName: 'Instalar dependências'
+
+# Build do Angular
+- script: |
+    npm run build -- --configuration production
+  displayName: 'Build Angular'
+
+# Publicar artefatos
+- task: CopyFiles@2
+  inputs:
+    SourceFolder: 'dist/GBastos.Hexagon-Skill_Test_Frontend'
+    Contents: '**'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'drop'
+    publishLocation: 'Container'
+
+# Deploy para Azure Static Web Apps
+- task: AzureStaticWebApp@0
+  inputs:
+    app_location: '/'
+    output_location: 'dist/GBastos.Hexagon-Skill_Test_Frontend'
+    azure_static_web_apps_api_token: $(AZURE_STATIC_WEB_APPS_API_TOKEN)
