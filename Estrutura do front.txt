@@ -1,0 +1,13 @@
+src/app/
+ ├─ core/              # serviços, guards, interceptors
+ ├─ shared/            # componentes reutilizáveis (toolbar, botões, etc.)
+ ├─ features/          # páginas principais
+ │   ├─ home/          # aqui fica a Home
+ │   │   ├─ home.component.ts
+ │   │   ├─ home.component.html
+ │   │   └─ home.component.css
+ │   ├─ login/
+ │   ├─ signup/
+ │   └─ adm/
+ └─ app.component.ts   # layout principal com router-outlet
+ └─ app.routes.ts      # configuração das rotas

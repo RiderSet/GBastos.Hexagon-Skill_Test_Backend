@@ -1,4 +1,44 @@
+#version: "3.9"
+
 services:
+  backend:
+    build:
+      context: .
+      dockerfile: GBastos.Hexagon-Skill_Test.Api/Dockerfile
+    container_name: hexagon-api
+    ports:
+      - "5017:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=HexagonDb;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
+      - RabbitMQ__HostName=rabbitmq
+      - RabbitMQ__QueueName=usuarios
+      - RabbitMQ__Username=${RABBITMQ_DEFAULT_USER}
+      - RabbitMQ__Password=${RABBITMQ_DEFAULT_PASS}
+    depends_on:
+      rabbitmq:
+        condition: service_started
+      sqlserver:
+        condition: service_started
+    restart: always
+
+  frontend:
+    build:
+      context: ./GBastos.Hexagon-Skill_Test_Frontend
+      dockerfile: Dockerfile
+    container_name: hexagon-frontend
+    ports:
+      - "4200:4200"
+    environment:
+      - NODE_ENV=development
+    volumes:
+      - ./GBastos.Hexagon-Skill_Test_Frontend:/usr/src/app
+    command: npm run start
+    depends_on:
+      - backend
+    restart: always
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: hexagon-sql
@@ -9,6 +49,7 @@ services:
       - "1433:1433"
     volumes:
       - sql_data:/var/opt/mssql
+    restart: always
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -19,23 +60,7 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
-
-  backend:
-    build:
-      context: ./GBastos.Hexagon-Skill_Test_Backend
-      dockerfile: Dockerfile
-    container_name: hexagon-backend
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - ConnectionStrings__DefaultConnection=Server=sqlserver;Database=HexagonDb;User Id=sa;Password=${SA_PASSWORD};
-      - RabbitMQ__Host=rabbitmq
-      - RabbitMQ__Username=${RABBITMQ_DEFAULT_USER}
-      - RabbitMQ__Password=${RABBITMQ_DEFAULT_PASS}
-    ports:
-      - "5000:5000"
-    depends_on:
-      - sqlserver
-      - rabbitmq
+    restart: always
 
 volumes:
   sql_data:
