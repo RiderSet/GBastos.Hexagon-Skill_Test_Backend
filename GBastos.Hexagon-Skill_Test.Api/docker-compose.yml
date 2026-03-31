@@ -1,4 +1,4 @@
-#version: "3.9"
+version: "3.9"
 
 services:
   backend:
@@ -18,7 +18,7 @@ services:
       - RabbitMQ__Password=${RABBITMQ_DEFAULT_PASS}
     depends_on:
       rabbitmq:
-        condition: service_started
+        condition: service_healthy
       sqlserver:
         condition: service_started
     restart: always
@@ -60,6 +60,11 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
     restart: always
 
 volumes:

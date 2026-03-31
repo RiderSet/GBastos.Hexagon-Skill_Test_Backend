@@ -22,25 +22,45 @@ public class RabbitMQPublisher : IDisposable
             Password = configuration["RabbitMQ:Password"]
         };
 
-        _connection = factory.CreateConnection();
-        _channel = _connection.CreateModel();
+        try
+        {
+            _connection = factory.CreateConnection();
+            _channel = _connection.CreateModel();
 
-        _channel.QueueDeclare(queue: _queueName,
-                             durable: true,
-                             exclusive: false,
-                             autoDelete: false,
-                             arguments: null);
+            _channel.QueueDeclare(
+                queue: _queueName,
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: null
+            );
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erro ao conectar ao RabbitMQ: {ex.Message}");
+            throw;
+        }
     }
 
     public void Publish<T>(T message)
     {
         var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
-        _channel.BasicPublish(exchange: "", routingKey: _queueName, basicProperties: null, body: body);
+
+        var properties = _channel.CreateBasicProperties();
+        properties.Persistent = true;
+
+        _channel.BasicPublish(
+            exchange: "",
+            routingKey: _queueName,
+            basicProperties: properties,
+            body: body
+        );
     }
 
     public void Dispose()
     {
         _channel?.Close();
         _connection?.Close();
+        GC.SuppressFinalize(this);
     }
 }

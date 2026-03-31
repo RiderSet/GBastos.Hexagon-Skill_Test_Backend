@@ -6,6 +6,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
 
+DotNetEnv.Env.Load();
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Configuração do banco
@@ -14,11 +16,8 @@ builder.Services.AddDbContext<UsuarioDbContext>(options =>
 {
     if (provider == "SqlServer")
     {
-        var connectionString = builder.Configuration.GetConnectionString("SqlServer")
-            ?? throw new ArgumentNullException("ConnectionStrings:SqlServer não encontrada.");
-        var password = Environment.GetEnvironmentVariable("SA_PASSWORD")
-            ?? throw new Exception("SA_PASSWORD não definida.");
-        connectionString = connectionString.Replace("{PASSWORD}", password);
+        var connectionString = builder.Configuration.GetConnectionString("Conn")
+            ?? throw new ArgumentNullException("ConnectionStrings:Conn não encontrada.");
         options.UseSqlServer(connectionString);
     }
     else
@@ -53,7 +52,7 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-// Registrar RabbitMQ
+// Registro do RabbitMQ
 builder.Services.AddSingleton<RabbitMQPublisher>();
 
 // Swagger
@@ -78,31 +77,29 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-// ⚡ Configuração de CORS para permitir Angular
+// Configuração de CORS para permitir Angular
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
         policy => policy
-            .WithOrigins("http://localhost:4200") // URL do frontend Angular
+            .WithOrigins("http://localhost:4200")
             .AllowAnyHeader()
             .AllowAnyMethod());
 });
 
-DotNetEnv.Env.Load();
-
 var app = builder.Build();
 
-// Middlewares
-app.UseSwagger();
-app.UseSwaggerUI();
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
 
-// ⚡ Aplicar CORS antes de Authentication/Authorization
 app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Endpoints
 var publisher = app.Services.GetRequiredService<RabbitMQPublisher>();
 app.MapUsuarioEndpoints(publisher);
 
