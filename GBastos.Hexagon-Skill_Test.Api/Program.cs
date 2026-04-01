@@ -16,7 +16,7 @@ builder.Services.AddDbContext<UsuarioDbContext>(options =>
 {
     if (provider == "SqlServer")
     {
-        var connectionString = builder.Configuration.GetConnectionString("Conn")
+        var connectionString = builder.Configuration.GetConnectionString("ConnectionStrings")
             ?? throw new ArgumentNullException("ConnectionStrings:Conn não encontrada.");
         options.UseSqlServer(connectionString);
     }
