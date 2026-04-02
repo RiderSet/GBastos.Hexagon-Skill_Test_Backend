@@ -20,11 +20,27 @@ public class UsuarioDbContext : DbContext
             .HasKey(u => u.Id);
 
         modelBuilder.Entity<Usuario>()
+            .HasIndex(u => u.CPF)
+            .IsUnique();
+
+        modelBuilder.Entity<Usuario>()
+            .HasIndex(u => u.Username)
+            .IsUnique();
+
+        modelBuilder.Entity<Usuario>()
             .Property(u => u.Nome)
             .IsRequired();
 
         modelBuilder.Entity<Usuario>()
             .Property(u => u.CPF)
+            .IsRequired();
+
+        modelBuilder.Entity<Usuario>()
+            .Property(u => u.Username)
+            .IsRequired();
+
+        modelBuilder.Entity<Usuario>()
+            .Property(u => u.PasswordHash)
             .IsRequired();
 
         modelBuilder.Entity<OutboxMessage>()

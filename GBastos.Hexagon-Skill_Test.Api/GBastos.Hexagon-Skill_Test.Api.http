@@ -1,4 +1,4 @@
-@GBastos.Hexagon_Skill_Test.Api_HostAddress = http://localhost:5017
+@GBastos.Hexagon_Skill_Test.Api_HostAddress = http://localhost:5100
 
 GET {{GBastos.Hexagon_Skill_Test.Api_HostAddress}}/weatherforecast/
 Accept: application/json

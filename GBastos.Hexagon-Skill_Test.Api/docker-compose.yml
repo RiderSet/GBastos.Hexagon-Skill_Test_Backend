@@ -7,7 +7,7 @@ services:
       dockerfile: GBastos.Hexagon-Skill_Test.Api/Dockerfile
     container_name: hexagon-api
     ports:
-      - "5017:8080"
+      - "5100:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080

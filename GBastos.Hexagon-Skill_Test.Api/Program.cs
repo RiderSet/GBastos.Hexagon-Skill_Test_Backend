@@ -1,9 +1,13 @@
 ﻿using GBastos.Hexagon_Skill_Test.Api.Data;
 using GBastos.Hexagon_Skill_Test.Api.Messaging.Brokers;
+using GBastos.Hexagon_Skill_Test.Api.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 
 DotNetEnv.Env.Load();
@@ -103,17 +107,24 @@ app.UseAuthorization();
 var publisher = app.Services.GetRequiredService<RabbitMQPublisher>();
 app.MapUsuarioEndpoints(publisher);
 
-app.MapPost("/login", (UserLogin user) =>
+app.MapPost("/api/auth/login", async (UserLogin user, UsuarioDbContext db) =>
 {
-    if (user.Username != "Hexagon" || user.Password != "senhaHexagon")
+    var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.Username == user.Username);
+    if (usuario == null)
         return Results.Unauthorized();
 
-    var tokenHandler = new System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler();
+    var hasher = new PasswordHasher<Usuario>();
+    var result = hasher.VerifyHashedPassword(usuario, usuario.PasswordHash, user.Password);
+
+    if (result == PasswordVerificationResult.Failed)
+        return Results.Unauthorized();
+
+    var tokenHandler = new JwtSecurityTokenHandler();
     var tokenDescriptor = new SecurityTokenDescriptor
     {
-        Subject = new System.Security.Claims.ClaimsIdentity(new[]
+        Subject = new ClaimsIdentity(new[]
         {
-            new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Name, user.Username)
+            new Claim(ClaimTypes.Name, user.Username)
         }),
         Expires = DateTime.UtcNow.AddHours(1),
         SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)

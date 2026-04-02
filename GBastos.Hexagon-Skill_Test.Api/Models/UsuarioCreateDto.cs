@@ -8,4 +8,7 @@ public class UsuarioCreateDto
     public string CPF { get; set; } = string.Empty;
     public string Cidade { get; set; } = string.Empty;
     public string Estado { get; set; } = string.Empty;
+
+    public string Username { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
 }
