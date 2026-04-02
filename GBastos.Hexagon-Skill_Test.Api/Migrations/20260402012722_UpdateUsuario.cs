@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace GBastos.Hexagon_Skill_Test.Api.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class UpdateUsuario : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -31,12 +31,14 @@ namespace GBastos.Hexagon_Skill_Test.Api.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Nome = table.Column<string>(type: "TEXT", nullable: false),
+                    Nome = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
                     Idade = table.Column<int>(type: "INTEGER", nullable: false),
-                    EstadoCivil = table.Column<string>(type: "TEXT", nullable: false),
-                    CPF = table.Column<string>(type: "TEXT", nullable: false),
-                    Cidade = table.Column<string>(type: "TEXT", nullable: false),
-                    Estado = table.Column<string>(type: "TEXT", nullable: false)
+                    EstadoCivil = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    CPF = table.Column<string>(type: "TEXT", maxLength: 11, nullable: false),
+                    Cidade = table.Column<string>(type: "TEXT", maxLength: 100, nullable: false),
+                    Estado = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    Username = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
+                    PasswordHash = table.Column<string>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -47,6 +49,18 @@ namespace GBastos.Hexagon_Skill_Test.Api.Migrations
                 name: "IX_OutboxMessages_Processed",
                 table: "OutboxMessages",
                 column: "Processed");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Usuarios_CPF",
+                table: "Usuarios",
+                column: "CPF",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Usuarios_Username",
+                table: "Usuarios",
+                column: "Username",
+                unique: true);
         }
 
         /// <inheritdoc />

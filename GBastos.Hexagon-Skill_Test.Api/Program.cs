@@ -131,7 +131,7 @@ app.MapPost("/api/auth/login", async (UserLogin user, UsuarioDbContext db) =>
     };
 
     var token = tokenHandler.CreateToken(tokenDescriptor);
-    return Results.Ok(new { token = tokenHandler.WriteToken(token) });
+    return Results.Ok(new { message = "Login realizado com sucesso!", token = tokenHandler.WriteToken(token) });
 });
 
 app.Run();

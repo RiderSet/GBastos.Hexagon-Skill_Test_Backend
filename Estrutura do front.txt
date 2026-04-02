@@ -1,13 +1,13 @@
 src/app/
- ├─ core/              # serviços, guards, interceptors
- ├─ shared/            # componentes reutilizáveis (toolbar, botões, etc.)
- ├─ features/          # páginas principais
- │   ├─ home/          # aqui fica a Home
+ ├─ core/              # serviços (usuario.service.ts, auth.service.ts)
+ ├─ shared/            # componentes reutilizáveis (toolbar, botões, grid)
+ ├─ features/
+ │   ├─ home/          # aqui fica a Home CRUD
  │   │   ├─ home.component.ts
  │   │   ├─ home.component.html
  │   │   └─ home.component.css
- │   ├─ login/
- │   ├─ signup/
- │   └─ adm/
- └─ app.component.ts   # layout principal com router-outlet
+ │   ├─ usuario-detail/ # tela de detalhe
+ │   └─ ...
+ └─ app.component.ts   # layout principal
  └─ app.routes.ts      # configuração das rotas
+ 
