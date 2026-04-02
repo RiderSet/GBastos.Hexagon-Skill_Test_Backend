@@ -1,13 +1,9 @@
 ﻿using GBastos.Hexagon_Skill_Test.Api.Data;
 using GBastos.Hexagon_Skill_Test.Api.Messaging.Brokers;
-using GBastos.Hexagon_Skill_Test.Api.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using System.Text;
 
 DotNetEnv.Env.Load();
@@ -36,7 +32,7 @@ builder.Services.AddDbContext<UsuarioDbContext>(options =>
 var keyString = Environment.GetEnvironmentVariable("JWT_KEY")
     ?? builder.Configuration["Jwt:Key"]
     ?? throw new ArgumentNullException("JWT Key não encontrada.");
-var key = Encoding.ASCII.GetBytes(keyString);
+var key = Encoding.UTF8.GetBytes(keyString);
 
 builder.Services.AddAuthentication(options =>
 {
@@ -104,36 +100,8 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
+// injeta publisher e chave JWT nos endpoints
 var publisher = app.Services.GetRequiredService<RabbitMQPublisher>();
-app.MapUsuarioEndpoints(publisher);
-
-app.MapPost("/api/auth/login", async (UserLogin user, UsuarioDbContext db) =>
-{
-    var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.Username == user.Username);
-    if (usuario == null)
-        return Results.Unauthorized();
-
-    var hasher = new PasswordHasher<Usuario>();
-    var result = hasher.VerifyHashedPassword(usuario, usuario.PasswordHash, user.Password);
-
-    if (result == PasswordVerificationResult.Failed)
-        return Results.Unauthorized();
-
-    var tokenHandler = new JwtSecurityTokenHandler();
-    var tokenDescriptor = new SecurityTokenDescriptor
-    {
-        Subject = new ClaimsIdentity(new[]
-        {
-            new Claim(ClaimTypes.Name, user.Username)
-        }),
-        Expires = DateTime.UtcNow.AddHours(1),
-        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
-    };
-
-    var token = tokenHandler.CreateToken(tokenDescriptor);
-    return Results.Ok(new { message = "Login realizado com sucesso!", token = tokenHandler.WriteToken(token) });
-});
+app.MapUsuarioEndpoints(publisher, key);
 
 app.Run();
-
-record UserLogin(string Username, string Password);

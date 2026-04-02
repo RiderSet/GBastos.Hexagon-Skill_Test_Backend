@@ -2,15 +2,20 @@
 using GBastos.Hexagon_Skill_Test.Api.Messaging.Brokers;
 using GBastos.Hexagon_Skill_Test.Api.Messaging.Outbox;
 using GBastos.Hexagon_Skill_Test.Api.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text.Json;
 
 public static class UsuarioEndpoints
 {
-    public static void MapUsuarioEndpoints(this WebApplication app, RabbitMQPublisher publisher)
+    public static void MapUsuarioEndpoints(this WebApplication app, RabbitMQPublisher publisher, byte[] jwtKey)
     {
         var group = app.MapGroup("/usuarios").RequireAuthorization();
 
+        // CRUD de usuários
         group.MapPost("", async (UsuarioDbContext db, UsuarioCreateDto input) =>
         {
             var usuario = new Usuario
@@ -32,7 +37,6 @@ public static class UsuarioEndpoints
             });
 
             await db.SaveChangesAsync();
-
             publisher.Publish(new { Event = "UsuarioCreated", Data = usuario });
 
             return Results.Created($"/usuarios/{usuario.Id}", usuario);
@@ -95,6 +99,73 @@ public static class UsuarioEndpoints
             publisher.Publish(new { Event = "UsuarioDeleted", Data = usuario });
 
             return Results.NoContent();
+        });
+
+        // Registro de usuário com senha
+        app.MapPost("/api/auth/register", async (UserLogin user, UsuarioDbContext db) =>
+        {
+            var existente = await db.Usuarios.FirstOrDefaultAsync(u => u.Username == user.Username);
+            if (existente != null)
+                return Results.BadRequest(new { message = "Usuário já existe." });
+
+            var novoUsuario = new Usuario
+            {
+                Id = Guid.NewGuid(),
+                Username = user.Username,
+                Nome = user.Username,
+                Cidade = "Rio de Janeiro",
+                Estado = "RJ",
+                EstadoCivil = "Solteiro",
+                Idade = 56,
+                CPF = "00342532707"
+            };
+
+            var hasher = new PasswordHasher<Usuario>();
+            novoUsuario.PasswordHash = hasher.HashPassword(novoUsuario, user.Password);
+
+            db.Usuarios.Add(novoUsuario);
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new { message = "Usuário registrado com sucesso!" });
+        });
+
+        // Login com claims
+        app.MapPost("/api/auth/login", async (UserLogin user, UsuarioDbContext db) =>
+        {
+            var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.Username == user.Username);
+            if (usuario == null)
+                return Results.Unauthorized();
+
+            var hasher = new PasswordHasher<Usuario>();
+            var result = hasher.VerifyHashedPassword(usuario, usuario.PasswordHash, user.Password);
+
+            if (result == PasswordVerificationResult.Failed)
+                return Results.Unauthorized();
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+                    new Claim(ClaimTypes.Name, usuario.Username),
+                    new Claim("cpf", usuario.CPF),
+                    new Claim("cidade", usuario.Cidade)
+                }),
+                Expires = DateTime.UtcNow.AddHours(1),
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(jwtKey),
+                    SecurityAlgorithms.HmacSha256Signature
+                )
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+
+            return Results.Ok(new
+            {
+                message = "Login realizado com sucesso!",
+                token = tokenHandler.WriteToken(token)
+            });
         });
     }
 }
