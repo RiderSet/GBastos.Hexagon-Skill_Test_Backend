@@ -10,11 +10,6 @@ DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
-
-// ======================
-// SQL SERVER
-// ======================
-
 var connectionString = builder.Configuration.GetConnectionString("SqlServer")
     ?? throw new ArgumentNullException("ConnectionStrings:SqlServer não encontrada.");
 
@@ -22,11 +17,6 @@ builder.Services.AddDbContext<UsuarioDbContext>(options =>
 {
     options.UseSqlServer(connectionString);
 });
-
-
-// ======================
-// JWT
-// ======================
 
 var keyString = Environment.GetEnvironmentVariable("JWT_KEY")
     ?? throw new ArgumentNullException("JWT_KEY não encontrada.");
@@ -47,19 +37,7 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
-
-
-// ======================
-// RABBITMQ
-// ======================
-
 builder.Services.AddSingleton<RabbitMQPublisher>();
-
-
-// ======================
-// SWAGGER
-// ======================
-
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerGen(options =>
@@ -90,11 +68,6 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-
-// ======================
-// CORS
-// ======================
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
@@ -107,11 +80,6 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-
-// ======================
-// MIDDLEWARE
-// ======================
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -123,23 +91,12 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
-
-// ======================
-// ENDPOINTS
-// ======================
-
 app.MapUsuarioEndpoints(key);
-
-
-// ======================
-// MIGRATIONS
-// ======================
 
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<UsuarioDbContext>();
     db.Database.Migrate();
 }
-
 
 app.Run();
