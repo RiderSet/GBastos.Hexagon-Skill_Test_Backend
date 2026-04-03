@@ -11,12 +11,101 @@ using System.Text.Json;
 
 public static class UsuarioEndpoints
 {
-    public static void MapUsuarioEndpoints(this WebApplication app, RabbitMQPublisher publisher, byte[] jwtKey)
+    public static void MapUsuarioEndpoints(this WebApplication app, byte[] jwtKey)
     {
-        var group = app.MapGroup("/usuarios").RequireAuthorization();
+        var group = app.MapGroup("/api/auth");
 
-        // CRUD de usuários
-        group.MapPost("", async (UsuarioDbContext db, UsuarioCreateDto input) =>
+        // Registro
+        group.MapPost("/Register", async (UserLogin user, UsuarioDbContext db) =>
+        {
+            var existente = await db.Usuarios
+                .FirstOrDefaultAsync(u => u.Username == user.Username);
+
+            var cpfJaExiste = await db.Usuarios
+                .AnyAsync(u => u.CPF == user.CPF);
+
+            if (cpfJaExiste)
+            {
+                return Results.Conflict(new
+                {
+                    message = "Já existe um usuário cadastrado com este CPF.",
+                    field = "cpf",
+                    error = "duplicate_cpf"
+                });
+            }
+
+            var hasher = new PasswordHasher<Usuario>();
+
+            if (existente != null)
+            {
+                existente.PasswordHash = hasher.HashPassword(existente, user.Password);
+            }
+            else
+            {
+                var novoUsuario = new Usuario
+                {
+                    Id = Guid.NewGuid(),
+                    Username = user.Username,
+                    Nome = user.Username,
+                    Cidade = "Rio de Janeiro",
+                    Estado = "RJ",
+                    EstadoCivil = "Solteiro",
+                    Idade = 56,
+                    CPF = user.CPF
+                };
+
+                novoUsuario.PasswordHash = hasher.HashPassword(novoUsuario, user.Password);
+
+                db.Usuarios.Add(novoUsuario);
+            }
+
+            await db.SaveChangesAsync();
+
+            return Results.Ok(new
+            {
+                message = "Usuário registrado com sucesso!"
+            });
+        });
+
+        // Login
+        group.MapPost("/Login", async (UserLogin user, UsuarioDbContext db) =>
+        {
+            var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.Username == user.Username);
+            if (usuario == null) return Results.Unauthorized();
+
+            var hasher = new PasswordHasher<Usuario>();
+
+            if (hasher.VerifyHashedPassword(usuario, usuario.PasswordHash, user.Password)
+                == PasswordVerificationResult.Failed)
+                return Results.Unauthorized();
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
+                    new Claim(ClaimTypes.Name, usuario.Username),
+                    new Claim("cpf", usuario.CPF),
+                    new Claim("cidade", usuario.Cidade)
+                }),
+                Expires = DateTime.UtcNow.AddHours(1),
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(jwtKey),
+                    SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+
+            return Results.Ok(new
+            {
+                message = "Login realizado com sucesso!",
+                token = tokenHandler.WriteToken(token)
+            });
+        });
+
+        group.MapPost("/Create", async (UsuarioDbContext db, UsuarioCreateDto input, RabbitMQPublisher publisher) =>
         {
             var usuario = new Usuario
             {
@@ -30,39 +119,77 @@ public static class UsuarioEndpoints
             };
 
             db.Usuarios.Add(usuario);
+
             db.OutboxMessages.Add(new OutboxMessage
             {
                 EventType = "UsuarioCreated",
                 Payload = JsonSerializer.Serialize(usuario)
             });
 
-            await db.SaveChangesAsync();
-            publisher.Publish(new { Event = "UsuarioCreated", Data = usuario });
+            try
+            {
+                await db.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex)
+            {
+                if (ex.InnerException?.Message.Contains("IX_Usuarios_CPF") == true)
+                {
+                    return Results.Conflict(new
+                    {
+                        message = "Já existe um usuário cadastrado com este CPF.",
+                        field = "cpf",
+                        error = "duplicate_cpf"
+                    });
+                }
+
+                return Results.Problem(
+                    title: "Erro ao salvar usuário",
+                    detail: "Ocorreu um erro inesperado ao salvar os dados.",
+                    statusCode: 500);
+            }
+
+            publisher.Publish(new
+            {
+                Event = "UsuarioCreated",
+                Data = usuario
+            });
 
             return Results.Created($"/usuarios/{usuario.Id}", usuario);
         });
 
-        group.MapGet("", async (UsuarioDbContext db, int page = 1, int pageSize = 10) =>
+        // Listar usuários
+        group.MapGet("/GetAll", async (UsuarioDbContext db, int page = 1, int pageSize = 10) =>
         {
             page = Math.Max(page, 1);
             pageSize = Math.Clamp(pageSize, 1, 100);
 
             var total = await db.Usuarios.CountAsync();
-            var data = await db.Usuarios.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+
+            var data = await db.Usuarios
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
 
             return Results.Ok(new { total, page, pageSize, data });
         });
 
-        group.MapGet("/{id:Guid}", async (UsuarioDbContext db, Guid id) =>
+        // Buscar por ID
+        group.MapGet("/GetById/{id:Guid}", async (UsuarioDbContext db, Guid id) =>
         {
             var usuario = await db.Usuarios.FindAsync(id);
-            return usuario is null ? Results.NotFound() : Results.Ok(usuario);
+
+            return usuario is null
+                ? Results.NotFound()
+                : Results.Ok(usuario);
         });
 
-        group.MapPut("/{id:Guid}", async (UsuarioDbContext db, Guid id, UsuarioCreateDto input) =>
+        // Atualizar
+        group.MapPut("/Update/{id:Guid}", async (UsuarioDbContext db, Guid id, UsuarioCreateDto input, RabbitMQPublisher publisher) =>
         {
             var usuario = await db.Usuarios.FindAsync(id);
-            if (usuario is null) return Results.NotFound();
+
+            if (usuario is null)
+                return Results.NotFound();
 
             usuario.Nome = input.Nome;
             usuario.Idade = input.Idade;
@@ -78,17 +205,26 @@ public static class UsuarioEndpoints
             });
 
             await db.SaveChangesAsync();
-            publisher.Publish(new { Event = "UsuarioUpdated", Data = usuario });
+
+            publisher.Publish(new
+            {
+                Event = "UsuarioUpdated",
+                Data = usuario
+            });
 
             return Results.Ok(usuario);
         });
 
-        group.MapDelete("/{id:Guid}", async (UsuarioDbContext db, Guid id) =>
+        // Deletar
+        group.MapDelete("/Remote/{id:Guid}", async (UsuarioDbContext db, Guid id, RabbitMQPublisher publisher) =>
         {
             var usuario = await db.Usuarios.FindAsync(id);
-            if (usuario is null) return Results.NotFound();
+
+            if (usuario is null)
+                return Results.NotFound();
 
             db.Usuarios.Remove(usuario);
+
             db.OutboxMessages.Add(new OutboxMessage
             {
                 EventType = "UsuarioDeleted",
@@ -96,76 +232,14 @@ public static class UsuarioEndpoints
             });
 
             await db.SaveChangesAsync();
-            publisher.Publish(new { Event = "UsuarioDeleted", Data = usuario });
+
+            publisher.Publish(new
+            {
+                Event = "UsuarioDeleted",
+                Data = usuario
+            });
 
             return Results.NoContent();
-        });
-
-        // Registro de usuário com senha
-        app.MapPost("/api/auth/register", async (UserLogin user, UsuarioDbContext db) =>
-        {
-            var existente = await db.Usuarios.FirstOrDefaultAsync(u => u.Username == user.Username);
-            if (existente != null)
-                return Results.BadRequest(new { message = "Usuário já existe." });
-
-            var novoUsuario = new Usuario
-            {
-                Id = Guid.NewGuid(),
-                Username = user.Username,
-                Nome = user.Username,
-                Cidade = "Rio de Janeiro",
-                Estado = "RJ",
-                EstadoCivil = "Solteiro",
-                Idade = 56,
-                CPF = "00342532707"
-            };
-
-            var hasher = new PasswordHasher<Usuario>();
-            novoUsuario.PasswordHash = hasher.HashPassword(novoUsuario, user.Password);
-
-            db.Usuarios.Add(novoUsuario);
-            await db.SaveChangesAsync();
-
-            return Results.Ok(new { message = "Usuário registrado com sucesso!" });
-        });
-
-        // Login com claims
-        app.MapPost("/api/auth/login", async (UserLogin user, UsuarioDbContext db) =>
-        {
-            var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.Username == user.Username);
-            if (usuario == null)
-                return Results.Unauthorized();
-
-            var hasher = new PasswordHasher<Usuario>();
-            var result = hasher.VerifyHashedPassword(usuario, usuario.PasswordHash, user.Password);
-
-            if (result == PasswordVerificationResult.Failed)
-                return Results.Unauthorized();
-
-            var tokenHandler = new JwtSecurityTokenHandler();
-            var tokenDescriptor = new SecurityTokenDescriptor
-            {
-                Subject = new ClaimsIdentity(new[]
-                {
-                    new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
-                    new Claim(ClaimTypes.Name, usuario.Username),
-                    new Claim("cpf", usuario.CPF),
-                    new Claim("cidade", usuario.Cidade)
-                }),
-                Expires = DateTime.UtcNow.AddHours(1),
-                SigningCredentials = new SigningCredentials(
-                    new SymmetricSecurityKey(jwtKey),
-                    SecurityAlgorithms.HmacSha256Signature
-                )
-            };
-
-            var token = tokenHandler.CreateToken(tokenDescriptor);
-
-            return Results.Ok(new
-            {
-                message = "Login realizado com sucesso!",
-                token = tokenHandler.WriteToken(token)
-            });
         });
     }
 }

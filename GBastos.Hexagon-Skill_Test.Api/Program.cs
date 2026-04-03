@@ -10,53 +10,58 @@ DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configuração do banco
-var provider = builder.Configuration["DatabaseProvider"];
+
+// ======================
+// SQL SERVER
+// ======================
+
+var connectionString = builder.Configuration.GetConnectionString("SqlServer")
+    ?? throw new ArgumentNullException("ConnectionStrings:SqlServer não encontrada.");
+
 builder.Services.AddDbContext<UsuarioDbContext>(options =>
 {
-    if (provider == "SqlServer")
-    {
-        var connectionString = builder.Configuration.GetConnectionString("ConnectionStrings")
-            ?? throw new ArgumentNullException("ConnectionStrings:Conn não encontrada.");
-        options.UseSqlServer(connectionString);
-    }
-    else
-    {
-        var connectionString = builder.Configuration.GetConnectionString("Sqlite")
-            ?? throw new ArgumentNullException("ConnectionStrings:Sqlite não encontrada.");
-        options.UseSqlite(connectionString);
-    }
+    options.UseSqlServer(connectionString);
 });
 
-// Configuração do JWT
+
+// ======================
+// JWT
+// ======================
+
 var keyString = Environment.GetEnvironmentVariable("JWT_KEY")
-    ?? builder.Configuration["Jwt:Key"]
-    ?? throw new ArgumentNullException("JWT Key não encontrada.");
+    ?? throw new ArgumentNullException("JWT_KEY não encontrada.");
+
 var key = Encoding.UTF8.GetBytes(keyString);
 
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = false,
-        ValidateAudience = false
-    };
-});
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(key),
+            ValidateIssuer = false,
+            ValidateAudience = false
+        };
+    });
 
 builder.Services.AddAuthorization();
 
-// Registro do RabbitMQ
+
+// ======================
+// RABBITMQ
+// ======================
+
 builder.Services.AddSingleton<RabbitMQPublisher>();
 
-// Swagger
+
+// ======================
+// SWAGGER
+// ======================
+
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -68,16 +73,28 @@ builder.Services.AddSwaggerGen(options =>
         In = ParameterLocation.Header,
         Description = "Digite: Bearer {seu token}"
     });
+
     options.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
-            new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } },
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
             Array.Empty<string>()
         }
     });
 });
 
-// Configuração de CORS para permitir Angular
+
+// ======================
+// CORS
+// ======================
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend",
@@ -87,7 +104,13 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod());
 });
 
+
 var app = builder.Build();
+
+
+// ======================
+// MIDDLEWARE
+// ======================
 
 if (app.Environment.IsDevelopment())
 {
@@ -100,8 +123,23 @@ app.UseCors("AllowFrontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
-// injeta publisher e chave JWT nos endpoints
-var publisher = app.Services.GetRequiredService<RabbitMQPublisher>();
-app.MapUsuarioEndpoints(publisher, key);
+
+// ======================
+// ENDPOINTS
+// ======================
+
+app.MapUsuarioEndpoints(key);
+
+
+// ======================
+// MIGRATIONS
+// ======================
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<UsuarioDbContext>();
+    db.Database.Migrate();
+}
+
 
 app.Run();

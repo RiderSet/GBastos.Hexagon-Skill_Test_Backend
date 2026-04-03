@@ -1,4 +1,4 @@
-version: "3.9"
+# version: "3.9"
 
 services:
   backend:
@@ -9,11 +9,10 @@ services:
     ports:
       - "5100:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8080
       - ConnectionStrings__DefaultConnection=Server=sqlserver,1433;Database=HexagonDb;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True
-   #  - RabbitMQ__HostName=rabbitmq
-      - RabbitMQ__HostName=localhost
+      - RabbitMQ__HostName=rabbitmq
       - RabbitMQ__QueueName=usuarios
       - RabbitMQ__Username=${RABBITMQ_DEFAULT_USER}
       - RabbitMQ__Password=${RABBITMQ_DEFAULT_PASS}
@@ -23,22 +22,6 @@ services:
         condition: service_healthy
       sqlserver:
         condition: service_started
-    restart: always
-
-  frontend:
-    build:
-      context: ./GBastos.Hexagon-Skill_Test_Frontend
-      dockerfile: Dockerfile
-    container_name: hexagon-frontend
-    ports:
-      - "4200:4200"
-    environment:
-      - NODE_ENV=development
-    volumes:
-      - ./GBastos.Hexagon-Skill_Test_Frontend:/usr/src/app
-    command: npm run start
-    depends_on:
-      - backend
     restart: always
 
   sqlserver:

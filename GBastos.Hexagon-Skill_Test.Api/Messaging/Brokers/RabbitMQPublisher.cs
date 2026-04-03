@@ -19,7 +19,8 @@ public class RabbitMQPublisher : IDisposable
         {
             HostName = hostname,
             UserName = configuration["RabbitMQ:Username"],
-            Password = configuration["RabbitMQ:Password"]
+            Password = configuration["RabbitMQ:Password"],
+            Port = int.Parse(configuration["RabbitMQ:Port"] ?? "5672")
         };
 
         try

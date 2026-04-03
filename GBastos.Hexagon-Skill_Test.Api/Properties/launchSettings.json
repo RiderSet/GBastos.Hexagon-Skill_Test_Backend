@@ -1,14 +1,5 @@
 {
   "profiles": {
-    "SQLite": {
-      "commandName": "Project",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development",
-        "DatabaseProvider": "Sqlite"
-      },
-      "dotnetRunMessages": true,
-      "applicationUrl": "https://localhost:7248;http://localhost:5100"
-    },
     "SqlServer": {
       "commandName": "Project",
       "environmentVariables": {
