@@ -1,4 +1,4 @@
-﻿using GBastos.Hexagon_Skill_Test.Api.Data;
+using GBastos.Hexagon_Skill_Test.Api.Data;
 using GBastos.Hexagon_Skill_Test.Api.Messaging.Brokers;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -70,7 +70,7 @@ builder.Services.AddSwaggerGen(options =>
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend",
+    options.AddPolicy("AllowAngular",
         policy => policy
             .WithOrigins("http://localhost:4200")
             .AllowAnyHeader()
@@ -86,7 +86,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowFrontend");
+app.UseCors("AllowAngular");
 
 app.UseAuthentication();
 app.UseAuthorization();
