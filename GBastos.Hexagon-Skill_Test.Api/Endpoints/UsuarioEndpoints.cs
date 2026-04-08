@@ -1,4 +1,4 @@
-﻿using GBastos.Hexagon_Skill_Test.Api.Data;
+using GBastos.Hexagon_Skill_Test.Api.Data;
 using GBastos.Hexagon_Skill_Test.Api.Messaging.Brokers;
 using GBastos.Hexagon_Skill_Test.Api.Messaging.Outbox;
 using GBastos.Hexagon_Skill_Test.Api.Models;
@@ -16,7 +16,7 @@ public static class UsuarioEndpoints
         var group = app.MapGroup("/api/auth");
 
         // Registro
-        group.MapPost("/Register", async (UserLogin user, UsuarioDbContext db) =>
+        group.MapPost("/register", async (UserLogin user, UsuarioDbContext db) =>
         {
             var existente = await db.Usuarios
                 .FirstOrDefaultAsync(u => u.Username == user.Username);
@@ -68,7 +68,7 @@ public static class UsuarioEndpoints
         });
 
         // Login
-        group.MapPost("/Login", async (UserLogin user, UsuarioDbContext db) =>
+        group.MapPost("/login", async (UserLogin user, UsuarioDbContext db) =>
         {
             var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.Username == user.Username);
             if (usuario == null) return Results.Unauthorized();
@@ -87,8 +87,11 @@ public static class UsuarioEndpoints
                 {
                     new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString()),
                     new Claim(ClaimTypes.Name, usuario.Username),
+                    new Claim("nome", usuario.Nome),
+                    new Claim("idade", usuario.Idade.ToString()),
                     new Claim("cpf", usuario.CPF),
-                    new Claim("cidade", usuario.Cidade)
+                    new Claim("cidade", usuario.Cidade),
+                    new Claim("estado", usuario.Estado)
                 }),
                 Expires = DateTime.UtcNow.AddHours(1),
                 SigningCredentials = new SigningCredentials(
@@ -105,7 +108,7 @@ public static class UsuarioEndpoints
             });
         });
 
-        group.MapPost("/Create", async (UsuarioDbContext db, UsuarioCreateDto input, RabbitMQPublisher publisher) =>
+        group.MapPost("/create", async (UsuarioDbContext db, UsuarioCreateDto input, RabbitMQPublisher publisher) =>
         {
             var usuario = new Usuario
             {
@@ -158,7 +161,7 @@ public static class UsuarioEndpoints
         });
 
         // Listar usuários
-        group.MapGet("/GetAll", async (UsuarioDbContext db, int page = 1, int pageSize = 10) =>
+        group.MapGet("/getAll", async (UsuarioDbContext db, int page = 1, int pageSize = 10) =>
         {
             page = Math.Max(page, 1);
             pageSize = Math.Clamp(pageSize, 1, 100);
@@ -174,7 +177,7 @@ public static class UsuarioEndpoints
         });
 
         // Buscar por ID
-        group.MapGet("/GetById/{id:Guid}", async (UsuarioDbContext db, Guid id) =>
+        group.MapGet("/getById/{id:Guid}", async (UsuarioDbContext db, Guid id) =>
         {
             var usuario = await db.Usuarios.FindAsync(id);
 
@@ -184,7 +187,7 @@ public static class UsuarioEndpoints
         });
 
         // Atualizar
-        group.MapPut("/Update/{id:Guid}", async (UsuarioDbContext db, Guid id, UsuarioCreateDto input, RabbitMQPublisher publisher) =>
+        group.MapPut("/update/{id:Guid}", async (UsuarioDbContext db, Guid id, UsuarioCreateDto input, RabbitMQPublisher publisher) =>
         {
             var usuario = await db.Usuarios.FindAsync(id);
 
@@ -216,7 +219,7 @@ public static class UsuarioEndpoints
         });
 
         // Deletar
-        group.MapDelete("/Remote/{id:Guid}", async (UsuarioDbContext db, Guid id, RabbitMQPublisher publisher) =>
+        group.MapDelete("/remote/{id:Guid}", async (UsuarioDbContext db, Guid id, RabbitMQPublisher publisher) =>
         {
             var usuario = await db.Usuarios.FindAsync(id);
 
