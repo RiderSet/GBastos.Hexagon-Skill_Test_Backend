@@ -186,8 +186,112 @@ public static class UsuarioEndpoints
                 : Results.Ok(usuario);
         });
 
-        // Atualizar
-        group.MapPut("/update/{id:Guid}", async (UsuarioDbContext db, Guid id, UsuarioCreateDto input, RabbitMQPublisher publisher) =>
+    group.MapPost("/forgot-password", async (UsuarioDbContext db, string email) =>
+    {
+      var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.Username == email || u.CPF == email);
+      if (usuario == null)
+      {
+        return Results.NotFound(new { message = "Usuário não encontrado" });
+      }
+
+      var tokenHandler = new JwtSecurityTokenHandler();
+      var tokenDescriptor = new SecurityTokenDescriptor
+      {
+        Subject = new ClaimsIdentity(new[]
+          {
+            new Claim(ClaimTypes.NameIdentifier, usuario.Id.ToString())
+        }),
+        Expires = DateTime.UtcNow.AddMinutes(15), // token expira em 15 minutos
+        SigningCredentials = new SigningCredentials(
+              new SymmetricSecurityKey(jwtKey),
+              SecurityAlgorithms.HmacSha256Signature)
+      };
+
+      var resetToken = tokenHandler.CreateToken(tokenDescriptor);
+      var tokenString = tokenHandler.WriteToken(resetToken);
+
+      // Aqui você enviaria o tokenString por email ao usuário
+      return Results.Ok(new { message = "Email de recuperação enviado!", token = tokenString });
+    });
+
+    group.MapPost("/reset-password", async (UsuarioDbContext db, string token, string newPassword) =>
+    {
+      var tokenHandler = new JwtSecurityTokenHandler();
+      try
+      {
+        var principal = tokenHandler.ValidateToken(token, new TokenValidationParameters
+        {
+          ValidateIssuerSigningKey = true,
+          IssuerSigningKey = new SymmetricSecurityKey(jwtKey),
+          ValidateIssuer = false,
+          ValidateAudience = false,
+          ClockSkew = TimeSpan.Zero
+        }, out SecurityToken validatedToken);
+
+        var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (userId == null) return Results.BadRequest(new { message = "Token inválido" });
+
+        var usuario = await db.Usuarios.FindAsync(Guid.Parse(userId));
+        if (usuario == null) return Results.NotFound(new { message = "Usuário não encontrado" });
+
+        var hasher = new PasswordHasher<Usuario>();
+        usuario.PasswordHash = hasher.HashPassword(usuario, newPassword);
+
+        await db.SaveChangesAsync();
+
+        return Results.Ok(new { message = "Senha redefinida com sucesso!" });
+      }
+      catch (Exception)
+      {
+        return Results.Problem(
+            title: "Token inválido ou expirado",
+            statusCode: 401
+        );
+      }
+    });
+
+    group.MapPost("/refresh-token", (string refreshToken) =>
+    {
+      try
+      {
+        var tokenHandler = new JwtSecurityTokenHandler();
+        var principal = tokenHandler.ValidateToken(refreshToken, new TokenValidationParameters
+        {
+          ValidateIssuerSigningKey = true,
+          IssuerSigningKey = new SymmetricSecurityKey(jwtKey),
+          ValidateIssuer = false,
+          ValidateAudience = false,
+          ClockSkew = TimeSpan.Zero
+        }, out SecurityToken validatedToken);
+
+        var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+        var newTokenDescriptor = new SecurityTokenDescriptor
+        {
+          Subject = new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }),
+          Expires = DateTime.UtcNow.AddHours(1),
+          SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(jwtKey), SecurityAlgorithms.HmacSha256Signature)
+        };
+
+        var newToken = tokenHandler.CreateToken(newTokenDescriptor);
+
+        return Results.Ok(new
+        {
+          token = tokenHandler.WriteToken(newToken),
+          refreshToken // mantém o mesmo refresh
+        });
+      }
+      catch
+      {
+        return Results.Problem(
+            title: "Refresh token inválido",
+            statusCode: 401
+        );
+      }
+    });
+
+    // Atualizar
+    group.MapPut("/update/{id:Guid}", async (UsuarioDbContext db, Guid id, UsuarioCreateDto input, RabbitMQPublisher publisher) =>
         {
             var usuario = await db.Usuarios.FindAsync(id);
 
