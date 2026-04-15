@@ -1,4 +1,6 @@
 using GBastos.Hexagon_Skill_Test.Api.Data;
+using GBastos.Hexagon_Skill_Test.Api.Endpoints;
+using GBastos.Hexagon_Skill_Test.Api.Interfaces;
 using GBastos.Hexagon_Skill_Test.Api.Messaging.Brokers;
 using GBastos.Hexagon_Skill_Test.Api.Messaging.Outbox;
 using GBastos.Hexagon_Skill_Test.Api.Models;
@@ -241,6 +243,7 @@ public static class UsuarioEndpoints
 
         return Results.Ok(new { message = "Senha redefinida com sucesso!" });
       }
+
       catch (Exception)
       {
         return Results.Problem(
@@ -250,7 +253,7 @@ public static class UsuarioEndpoints
       }
     });
 
-    group.MapPost("/refresh-token", (string refreshToken) =>
+    group.MapPost("/refresh-token", (string refreshToken, IRefreshTokenRepository repo) =>
     {
       try
       {
@@ -264,8 +267,39 @@ public static class UsuarioEndpoints
           ClockSkew = TimeSpan.Zero
         }, out SecurityToken validatedToken);
 
+        // 🔎 Validação de claim obrigatória
         var userId = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+          return Results.Problem(
+              title: "Token não contém o identificador do usuário",
+              statusCode: 401
+          );
+        }
 
+        // 🔒 Verifica se o refresh token ainda é válido no repositório
+        var storedToken = repo.Get(refreshToken);
+        if (storedToken == null || storedToken.IsRevoked || storedToken.Expires < DateTime.UtcNow)
+        {
+          return Results.Problem(
+              title: "Refresh token inválido ou expirado",
+              statusCode: 401
+          );
+        }
+
+        // 🚫 Invalida o refresh token antigo
+        repo.Revoke(refreshToken);
+
+        // 🔄 Gera novo refresh token
+        var newRefreshToken = Guid.NewGuid().ToString("N");
+        repo.Save(new RefreshToken
+        {
+          Token = newRefreshToken,
+          UserId = userId,
+          Expires = DateTime.UtcNow.AddDays(7) // validade de 7 dias
+        });
+
+        // 🎟️ Cria novo access token
         var newTokenDescriptor = new SecurityTokenDescriptor
         {
           Subject = new ClaimsIdentity(new[] { new Claim(ClaimTypes.NameIdentifier, userId) }),
@@ -278,7 +312,7 @@ public static class UsuarioEndpoints
         return Results.Ok(new
         {
           token = tokenHandler.WriteToken(newToken),
-          refreshToken // mantém o mesmo refresh
+          refreshToken = newRefreshToken
         });
       }
       catch
