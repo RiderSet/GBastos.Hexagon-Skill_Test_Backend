@@ -70,14 +70,14 @@ public static class UsuarioEndpoints
         });
 
         // Login
-        group.MapPost("/login", async (UserLogin user, UsuarioDbContext db) =>
+        group.MapPost("/login", async (string username, string password, UsuarioDbContext db) =>
         {
-            var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.Username == user.Username);
+            var usuario = await db.Usuarios.FirstOrDefaultAsync(u => u.Username == username);
             if (usuario == null) return Results.Unauthorized();
 
             var hasher = new PasswordHasher<Usuario>();
 
-            if (hasher.VerifyHashedPassword(usuario, usuario.PasswordHash, user.Password)
+            if (hasher.VerifyHashedPassword(usuario, usuario.PasswordHash, password)
                 == PasswordVerificationResult.Failed)
                 return Results.Unauthorized();
 
